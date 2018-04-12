@@ -38,7 +38,7 @@ public class Main {
 		try {
 			asegurados = LectorCsvAsegurados.parsear(ubicacionArchivo);
 		} catch (IOException e) {
-			System.out.println("Error: el archivo no ha podido ser leÃ­do con exito.");
+			System.out.println("Error: el archivo no ha podido ser leído con exito.");
 			return;
 		}
 

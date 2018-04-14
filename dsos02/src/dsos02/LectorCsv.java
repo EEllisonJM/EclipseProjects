@@ -3,13 +3,42 @@ package dsos02;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
-//shift + alt+ x
+
+/*[shift] + [alt] + [x] [j]*/
 public class LectorCsv {
-	String parametros[] = { "-a", "-p", "-i", "-d", "-c" };
+	List<Numero[]> numeros = new ArrayList<>();
+
+	List<Numero[]> archivo(String nombreArchivo) {
+		if (nombreArchivo.isEmpty()) {
+			System.out.println("Error: nombre de archivo no dado.");
+			return null;
+		}
+		Path ubicacionArchivo = Paths.get(nombreArchivo);
+		boolean existeArchivo = Files.exists(ubicacionArchivo);
+
+		if (!existeArchivo) {
+			System.out.println("Error: el archivo no existe.");
+			return null;
+		}
+		try {
+			LectorCsv lca = new LectorCsv();
+			boolean resultado = lca.encuentra(ubicacionArchivo);
+			if (resultado == true) {
+				return lca.parsear(ubicacionArchivo);
+			}
+		} catch (IOException e) {
+			System.out.println("Error: el archivo no ha podido ser leído con exito.");
+		}
+		return null;
+	}
 
 	boolean encuentra(Path ubicacionArchivo) throws IOException {
 		Reader lectorArchivo = new FileReader(ubicacionArchivo.toString());
@@ -30,46 +59,30 @@ public class LectorCsv {
 		return true;
 	}
 
-	public void parsear(Path ubicacionArchivo, String args[]) throws IOException {
+	public List<Numero[]> parsear(Path ubicacionArchivo) throws IOException {
 		Reader lectorArchivo = new FileReader(ubicacionArchivo.toString());
 		Iterable<CSVRecord> registros = CSVFormat.RFC4180.parse(lectorArchivo);
 
-		int linea = 0;
-
 		for (CSVRecord registro : registros) {
-
-			int arre[] = new int[registro.size()];
+			Numero arregloNumeros[] = new Numero[registro.size()];
 			for (int i = 0; i < registro.size(); i++) {
 				try {
-					arre[i] = Integer.parseInt(registro.get(i));
+					arregloNumeros[i] = new Numero(Integer.parseInt(registro.get(i)));
 				} catch (Exception e) {
-					System.out.println("Valor en linea " + (linea + 1) + " No es un numero, abortando mision...");
-					System.out.println("Mision no cumplida");
+					System.out.println(e.getMessage());
 				}
 			}
-			String aux="";
-			for (int i = 0; i < parametros.length; i++) {
-				for (int j = 0; j < args.length; j++) {
-					if (parametros[i].equals(args[j])) {
-						if(!aux.equals(parametros[i])) {
-							caso(parametros[i], arre);
-							aux=parametros[i];
-						}						
-						if (args.length == 2) {
-							caso("todo", arre);
-						}
-					}
-				}
-			}
-			linea++;
+			numeros.add(arregloNumeros);
 		}
+		return numeros;
 	}
 
-	void caso(String c, int arre[]) {
+	void caso(String c, Numero[] arre) {
 		switch (c) {
 		case "-p":
 			System.out.println("Sumatoria de pares: " + sumPares(arre));
 			break;
+
 		case "-i":
 			System.out.println("Sumatoria de impares: " + sumImpares(arre));
 			break;
@@ -79,7 +92,8 @@ public class LectorCsv {
 		case "-c":
 			System.out.println("Sumatoria centenas: " + sumCentenas(arre) + "\n");
 			break;
-		case "todo":
+		case "-all": // System.out.println(p[j].toString());
+
 			System.out.println("Sumatoria centenas: " + sumCentenas(arre));
 			System.out.println("Sumatoria de pares: " + sumPares(arre));
 			System.out.println("Sumatoria de impares: " + sumImpares(arre));
@@ -87,66 +101,47 @@ public class LectorCsv {
 			System.out.println("Sumatoria centenas: " + sumCentenas(arre));
 			System.out.println("");
 			break;
+		default:
+			System.out.println(Main.mensajeParametrosNoValidos());
+			break;
 		}
 	}
 
-	/*---------------------------------*/
-	boolean esPar(int num) {
-		if (Math.floorMod(num, 2) == 0) {
-			return true;
-		}
-		return false;
-	}
-
-	boolean esDecena(int num) {
-		if (num > 9 && num < 100) {
-			return true;
-		}
-		return false;
-	}
-
-	boolean esCentena(int num) {
-		if (num > 99 && num < 1000) {
-			return true;
-		}
-		return false;
-	}
-
-	int sumPares(int arre[]) {
+	int sumPares(Numero[] numeros) {
 		int suma = 0;
-		for (int i = 0; i < arre.length; i++) {
-			if (esPar(arre[i])) {
-				suma += arre[i];
+		for (int j = 0; j < numeros.length; j++) {
+			if (Math.floorMod(numeros[j].getValor(), 2) == 0) {/* Par */
+				suma += numeros[j].getValor();
 			}
 		}
 		return suma;
 	}
 
-	int sumImpares(int arre[]) {
+	int sumImpares(Numero[] numeros) {
 		int suma = 0;
-		for (int i = 0; i < arre.length; i++) {
-			if (!esPar(arre[i])) {
-				suma += arre[i];
+		for (int j = 0; j < numeros.length; j++) {
+			if (Math.floorMod(numeros[j].getValor(), 2) != 0) {/* Impar */
+				suma += numeros[j].getValor();
 			}
 		}
 		return suma;
 	}
 
-	int sumDecenas(int arre[]) {
+	int sumDecenas(Numero numeros[]) {
 		int suma = 0;
-		for (int i = 0; i < arre.length; i++) {
-			if (esDecena(arre[i])) {
-				suma += arre[i];
+		for (int i = 0; i < numeros.length; i++) {
+			if (numeros[i].esDecena()) {
+				suma += numeros[i].getValor();
 			}
 		}
 		return suma;
 	}
 
-	int sumCentenas(int arre[]) {
+	int sumCentenas(Numero numeros[]) {
 		int suma = 0;
-		for (int i = 0; i < arre.length; i++) {
-			if (esCentena(arre[i])) {
-				suma += arre[i];
+		for (int i = 0; i < numeros.length; i++) {
+			if (numeros[i].esCentena()) {
+				suma += numeros[i].getValor();
 			}
 		}
 		return suma;

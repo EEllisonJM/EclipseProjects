@@ -121,7 +121,8 @@ public class Main {
 			/* - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 			LectorCsv lCSV = new LectorCsv();
 			String nombreArchivo = "";
-			String argss[] = { "-p", "-a", "datos.csv", "-a" };
+			String argss[] = args;
+			// String argss[] = { "-p", "-a", "datos.csv", "-a" };
 			String parametros[] = { "-a", "-p", "-i", "-d", "-c" };
 
 			/* - - - - - - - - - - - - - - - - - - - - - - - - - - - */

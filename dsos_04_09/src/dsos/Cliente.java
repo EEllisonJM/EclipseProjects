@@ -31,53 +31,93 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.SocketException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-
 import org.apache.http.HttpEntity;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 
 public class Cliente {
 
 	public static void main(String[] args) throws Exception {
+		/* java -jar Cabrera nombres.csv */
+ 
 		String nombreArchivoCSV = "nombres.csv";
-		String[] alumnos = listaAlumnos();
+		String buscar = "Cabrera";
+		// nombreArchivoCSV = args[0];
+		// args[1] = archivoCSV;
+
+		List<Servidor> listaServidores = getServerNames(
+				"http://jimenezmartinezerikellison.dsos.net:1234/servidores.csv", "servidores.csv");
+
 		String puerto = "1234";
 		String url = "";
+		List<Alumno> listaAlumnos = new ArrayList<>();
+		/**/
+		/**/
+		Instant inicio = Instant.now();
+		
+		int count = 0;
 
-		for (int i = 4; i < 5; i++) {
-			url = "http://" + alumnos[i] + ":" + puerto + "/" + nombreArchivoCSV;
-			System.out.println("NODO: "+alumnos[i]);
-			getNombres(nombreArchivoCSV, url);
-		}
-		for (int i = 9; i < 13; i++) {
-			url = "http://" + alumnos[i] + ":" + puerto + "/" + nombreArchivoCSV;
-			System.out.println("NODO: "+alumnos[i]);
-			getNombres(nombreArchivoCSV, url);
-		}
-		for (int i = 16; i < 19; i++) {
-			url = "http://" + alumnos[i] + ":" + puerto + "/" + nombreArchivoCSV;
-			System.out.println("NODO: "+alumnos[i]);
-			getNombres(nombreArchivoCSV, url);
-	
-		}
-	}
+		for (int i = 0; i < listaServidores.size(); i++) {/* 26 */
+			url = "http://" + listaServidores.get(i).getUrl() + ":" + puerto + "/" + nombreArchivoCSV;
+			if (existeServidor(url)) {
+				System.out.print(
+						"[OK] NODO: " + (i + 1) + " " + listaServidores.get(i).getUrl() + " => Servidor encontrado\n");
+				listaAlumnos = getNombreAlumnos(nombreArchivoCSV, url);
+				List<Alumno> listaAgrupar = new ArrayList<>();
+				Instant inicioBusqueda = Instant.now();
+				for (int j = 0; j < listaAlumnos.size(); j++) {
+					// System.out.println("....");
 
-	public static void getNombres(String nombreArchivoCSV, String url) throws Exception {
+					if (listaAlumnos.get(j).getApellidoPaterno().equals(buscar)) {
+						listaAgrupar.add(listaAlumnos.get(j));
+						count++;
+					}
+				}
+				System.out.println("[" + buscar + "] . Encontrado . " + count + " Veces");
+				count = 0;
+				Instant finBusqueda = Instant.now();
+				Duration durationBusqueda = Duration.between(inicioBusqueda, finBusqueda); // For
+																							// days-hours-minutes-seconds
+																							// scale.
+				long millisB = durationBusqueda.toMillis(); // Possible data-loss in truncating nanoseconds to
+															// milliseconds.
+				System.out.println("Duracion Busqueda: " + millisB + " en milisegundos");
+				/**/
+
+				Collections.sort(listaAgrupar, Alumno.ordenarPorNombre);
+				for (int j = 0; j < listaAgrupar.size(); j++) {
+					System.out.println(listaAgrupar.get(j).toString());
+				}
+				System.out.println("\n");
+				/**/
+			} else {
+				System.out.print(
+						"NODO: " + (i + 1) + " " + listaServidores.get(i).getUrl() + " => Servidor No encontrado\n");
+			}
+		}
+
+		Instant fin = Instant.now();
+		Duration duration = Duration.between(inicio, fin); // For days-hours-minutes-seconds scale.
+		long millis = duration.toMillis(); // Possible data-loss in truncating nanoseconds to milliseconds.
+		System.out.println("Duracion aplicación: " + millis + " en milisegundos");
+	} 
+
+	public static List<Alumno> getNombreAlumnos(String nombreArchivoCSV, String url) throws Exception {
 		int numAlumnos;
+
 		CloseableHttpClient httpclient = HttpClients.createDefault();
 		try {
 			HttpGet httpGet = new HttpGet(url);
@@ -93,16 +133,11 @@ public class Cliente {
 			// by the connection manager.
 			try {
 				Instant inicio = Instant.now();
-				//System.out.println(inicio);
-
-				System.out.println(response1.getStatusLine());
-
 				HttpEntity entity1 = response1.getEntity();
 				// do something useful with the response body
 				// and ensure it is fully consumed
 				/*----*/
 				BufferedInputStream bis = new BufferedInputStream(entity1.getContent());
-				// String filePath = "sample.txt";
 				BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(new File(nombreArchivoCSV)));
 				int inByte;
 				while ((inByte = bis.read()) != -1)
@@ -118,60 +153,94 @@ public class Cliente {
 				Instant fin = Instant.now();
 				Duration duration = Duration.between(inicio, fin); // For days-hours-minutes-seconds scale.
 				long millis = duration.toMillis(); // Possible data-loss in truncating nanoseconds to milliseconds.
-				System.out.println("Cantidad: "+numAlumnos);
-				System.out.println("Duracion: " + millis);
-			} catch (IOException e) {
-				System.out.println(response1.getStatusLine());
-				//return null;
+
+				response1.close();
+				httpclient.close();
+				return csvHandler.readStudentsNames(ubicacionArchivoLeer, '|');
 			} catch (Exception e) {
-				System.out.println(response1.getStatusLine());
-				//return null;
+				System.out.println("Que paso amiguito");
+				response1.close();
 			} finally {
 				response1.close();
 			}
+
+		} catch (IOException e) {
+			System.out.println("Error amigo");
+			e.getMessage();
+
 		} finally {
 			httpclient.close();
 		}
-		//return alumnos;
+		return null;
 	}
 
-	void push() throws Exception {
+	static List<Servidor> getServerNames(String url, String nombreArchivoCSV) throws IOException {
 		CloseableHttpClient httpclient = HttpClients.createDefault();
 		try {
-			HttpPost httpPost = new HttpPost("http://httpbin.org/post");
-			List<NameValuePair> nvps = new ArrayList<NameValuePair>();
-			nvps.add(new BasicNameValuePair("username", "vip"));
-			nvps.add(new BasicNameValuePair("password", "secret"));
-			httpPost.setEntity(new UrlEncodedFormEntity(nvps));
-			CloseableHttpResponse response2 = httpclient.execute(httpPost);
+			HttpGet httpGet = new HttpGet(url);
 
+			CloseableHttpResponse response1 = httpclient.execute(httpGet);
+			// The underlying HTTP connection is still held by the response object
+			// to allow the response content to be streamed directly from the network
+			// socket.
+			// In order to ensure correct deallocation of system resources
+			// the user MUST call CloseableHttpResponse#close() from a finally clause.
+			// Please note that if response content is not fully consumed the underlying
+			// connection cannot be safely re-used and will be shut down and discarded
+			// by the connection manager.
 			try {
-				System.out.println(response2.getStatusLine());
-				HttpEntity entity2 = response2.getEntity();
+				Instant inicio = Instant.now();
+				HttpEntity entity1 = response1.getEntity();
 				// do something useful with the response body
 				// and ensure it is fully consumed
-				EntityUtils.consume(entity2);
+				/*----*/
+				BufferedInputStream bis = new BufferedInputStream(entity1.getContent());
+				BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(new File(nombreArchivoCSV)));
+				int inByte;
+				while ((inByte = bis.read()) != -1)
+					bos.write(inByte);
+				bis.close();
+				bos.close();
+				/*----*/
+				Path ubicacionArchivoLeer = Paths.get(nombreArchivoCSV);
+				CSVHandler csvHandler = new CSVHandler();
+
+				EntityUtils.consume(entity1);
+				Instant fin = Instant.now();
+				Duration duration = Duration.between(inicio, fin); // For days-hours-minutes-seconds scale.
+				long millis = duration.toMillis(); // Possible data-loss in truncating nanoseconds to milliseconds.
+
+				response1.close();
+				httpclient.close();
+				return csvHandler.readServersNames(ubicacionArchivoLeer, ',');
+			} catch (Exception e) {
+				System.out.println("Que paso amiguito");
+				response1.close();
 			} finally {
-				response2.close();
+				response1.close();
 			}
+
+		} catch (IOException e) {
+			System.out.println("Error amigo");
+			e.getMessage();
 		} finally {
 			httpclient.close();
 		}
+		return null;
 	}
 
-	static String[] listaAlumnos() {
-		String[] alumnos = new String[] { "altamiranonolascoadalididier.dsos.net",
-				"antoniomoralesalfonsofabian.dsos.net", "bartoloosoriogabino.dsos.net",
-				"chavezhernandezsergioivan.dsos.net", "cuevasortizemmanuelalejandro.dsos.net",
-				"diazperezmarcos.dsos.net", "enriqueztoraljuancarlos.dsos.net", "garciagarciaguillermoricardo.dsos.net",
-				"gonzalezcruzcarlosfrancisco.dsos.net", "hernandezalcantarabrenda.dsos.net",
-				"hernandezgarciadavid.dsos.net", "jimenezmartinezerikellison.dsos.net", // 11
-				"lopezhernandezrobertobenjamin.dsos.net", "martinezgarciajorgealejandro.dsos.net",
-				"martinezmartinezjosemanuel.dsos.net", "matiasjacintogibran.dsos.net", "mendezramirezricardo.dsos.net", // 16
-				"mirandamirandaedgaryoset.dsos.net", "perezsantiagoeduardo.dsos.net", "ramirezruizdaniel.dsos.net",
-				"reyesoliverajocelyncitlali.dsos.net", "reyesvasquezdanielalejandro.dsos.net",
-				"riossilvaguillermo.dsos.net", "sanchezlopezeduardogeovanni.dsos.net",
-				"zaratehernandezjairomiguel.dsos.net", "zigalopezantonio.dsos.net" };
-		return alumnos;
+	/* Using core Java. */
+	static boolean existeServidor(String url) throws ClientProtocolException, IOException {
+		try {
+			HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
+			con.setRequestMethod("GET");// con.setRequestMethod("HEAD")
+			con.setConnectTimeout(2000); // set timeout to 3 seconds
+			return (con.getResponseCode() == HttpURLConnection.HTTP_OK);
+
+		} catch (java.net.SocketTimeoutException e) {
+			return false;
+		} catch (java.io.IOException e) {
+			return false;
+		}
 	}
 }
